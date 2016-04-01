@@ -22,6 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include "qemu/osdep.h"
 #include <hw/hw.h>
 #include <hw/i386/pc.h>
 #include <hw/pci/pci.h>
@@ -103,13 +104,6 @@ static int32_t bmdma_prepare_buf(IDEDMA *dma, int32_t limit)
                 qemu_sglist_add(&s->sg, bm->cur_prd_addr, sg_len);
             }
 
-            /* Note: We limit the max transfer to be 2GiB.
-             * This should accommodate the largest ATA transaction
-             * for LBA48 (65,536 sectors) and 32K sector sizes. */
-            if (s->sg.size > INT32_MAX) {
-                error_report("IDE: sglist describes more than 2GiB.");
-                break;
-            }
             bm->cur_prd_addr += l;
             bm->cur_prd_len -= l;
             s->io_buffer_size += l;
@@ -240,22 +234,7 @@ void bmdma_cmd_writeb(BMDMAState *bm, uint32_t val)
     /* Ignore writes to SSBM if it keeps the old value */
     if ((val & BM_CMD_START) != (bm->cmd & BM_CMD_START)) {
         if (!(val & BM_CMD_START)) {
-            /*
-             * We can't cancel Scatter Gather DMA in the middle of the
-             * operation or a partial (not full) DMA transfer would reach
-             * the storage so we wait for completion instead (we beahve
-             * like if the DMA was completed by the time the guest trying
-             * to cancel dma with bmdma_cmd_writeb with BM_CMD_START not
-             * set).
-             *
-             * In the future we'll be able to safely cancel the I/O if the
-             * whole DMA operation will be submitted to disk with a single
-             * aio operation with preadv/pwritev.
-             */
-            if (bm->bus->dma->aiocb) {
-                blk_drain_all();
-                assert(bm->bus->dma->aiocb == NULL);
-            }
+            ide_cancel_dma_sync(idebus_active_if(bm->bus));
             bm->status &= ~BM_STATUS_DMAING;
         } else {
             bm->cur_addr = bm->addr;

@@ -4,6 +4,8 @@
  * top-level directory.
  */
 
+#include "qemu/osdep.h"
+#include "qapi/error.h"
 #include "qemu-common.h"
 #include "qemu/sockets.h"
 
@@ -11,6 +13,7 @@
 #include "hw/virtio/virtio.h"
 #include "hw/virtio/virtio-input.h"
 
+#include <sys/ioctl.h>
 #include "standard-headers/linux/input.h"
 
 /* ----------------------------------------------------------------- */

@@ -17,11 +17,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "a64/disasm-a64.h"
-
 extern "C" {
+#include "qemu/osdep.h"
 #include "disas/bfd.h"
 }
+
+#include "vixl/a64/disasm-a64.h"
 
 using namespace vixl;
 
@@ -42,7 +43,7 @@ public:
         stream_ = stream;
     }
 
-    void SetPrintf(int (*printf_fn)(FILE *, const char *, ...)) {
+    void SetPrintf(fprintf_function printf_fn) {
         printf_ = printf_fn;
     }
 
@@ -53,7 +54,7 @@ protected:
     }
 
 private:
-    int (*printf_)(FILE *, const char *, ...);
+    fprintf_function printf_;
     FILE *stream_;
 };
 
